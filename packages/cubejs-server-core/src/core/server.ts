@@ -1,4 +1,4 @@
-/* eslint-disable global-require */
+/* eslint-disable global-require,no-return-assign */
 import crypto from 'crypto';
 import fs from 'fs-extra';
 import path from 'path';
@@ -7,6 +7,7 @@ import isDocker from 'is-docker';
 
 import { ApiGateway } from '@cubejs-backend/api-gateway';
 import {
+  asyncDebounce,
   CancelableInterval,
   createCancelableInterval, formatDuration,
   getAnonymousId,
@@ -524,36 +525,41 @@ export class CubejsServerCore {
       return this.orchestratorStorage.get(orchestratorId);
     }
 
-    const driverPromise = {};
-    let externalPreAggregationsDriverPromise;
+    const driverInstances: Record<string, BaseDriver> = {};
+    let externalDriverInstance: BaseDriver|null = null;
+
+    const getDriverInstance = asyncDebounce(async (dataSource: string) => {
+      const driver = await this.options.driverFactory({ ...context, dataSource });
+      if (driver.setLogger) {
+        driver.setLogger(this.logger);
+      }
+
+      return driver.testConnection().then(() => driver);
+    });
+
+    const getExternalDriverInstance = asyncDebounce(async () => {
+      const driver = await this.options.externalDriverFactory(context);
+      if (driver.setLogger) {
+        driver.setLogger(this.logger);
+      }
+
+      return driver.testConnection().then(() => driver);
+    });
 
     const orchestratorApi = this.createOrchestratorApi({
-      getDriver: async (dataSource) => {
-        if (!driverPromise[dataSource || 'default']) {
-          orchestratorApi.addDataSeenSource(dataSource);
-          const driver = await this.options.driverFactory({ ...context, dataSource });
-          if (driver.setLogger) {
-            driver.setLogger(this.logger);
-          }
-          driverPromise[dataSource || 'default'] = driver.testConnection().then(() => driver).catch(e => {
-            driverPromise[dataSource || 'default'] = null;
-            throw e;
-          });
+      getDriver: async (dataSource = 'default') => {
+        if (driverInstances[dataSource]) {
+          return driverInstances[dataSource];
         }
-        return driverPromise[dataSource || 'default'];
+
+        return driverInstances[dataSource] = await getDriverInstance(dataSource);
       },
       getExternalDriverFactory: this.options.externalDriverFactory && (async () => {
-        if (!externalPreAggregationsDriverPromise) {
-          const driver = await this.options.externalDriverFactory(context);
-          if (driver.setLogger) {
-            driver.setLogger(this.logger);
-          }
-          externalPreAggregationsDriverPromise = driver.testConnection().then(() => driver).catch(e => {
-            externalPreAggregationsDriverPromise = null;
-            throw e;
-          });
+        if (externalDriverInstance) {
+          return externalDriverInstance;
         }
-        return externalPreAggregationsDriverPromise;
+
+        return externalDriverInstance = await getExternalDriverInstance();
       }),
       redisPrefix: orchestratorId,
       orchestratorOptions: this.orchestratorOptions(context)
