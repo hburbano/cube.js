@@ -534,7 +534,16 @@ export class CubejsServerCore {
         driver.setLogger(this.logger);
       }
 
-      return driver.testConnection().then(() => driver);
+      return driver.testConnection().then(() => driver).catch(async (e: Error) => {
+        try {
+          if ((<any>driver).release) {
+            await (<any>driver).release();
+          }
+        } finally {
+          // eslint-disable-next-line no-unsafe-finally
+          throw e;
+        }
+      });
     });
 
     const getExternalDriverInstance = asyncDebounce(async () => {
@@ -543,7 +552,16 @@ export class CubejsServerCore {
         driver.setLogger(this.logger);
       }
 
-      return driver.testConnection().then(() => driver);
+      return driver.testConnection().then(() => driver).catch(async (e: Error) => {
+        try {
+          if ((<any>driver).release) {
+            (<any>driver).release();
+          }
+        } finally {
+          // eslint-disable-next-line no-unsafe-finally
+          throw e;
+        }
+      });
     });
 
     const orchestratorApi = this.createOrchestratorApi({
