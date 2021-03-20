@@ -24,7 +24,7 @@ describe('ClickHouseDriver', () => {
 
     const version = process.env.TEST_CLICKHOUSE_VERSION || 'latest';
 
-    container = await new GenericContainer('yandex/clickhouse-server', version)
+    container = await new GenericContainer(`yandex/clickhouse-server:${version}`)
       .withExposedPorts(8123)
       .start();
 

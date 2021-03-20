@@ -152,7 +152,7 @@ jobs:
 
   integration-redis:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 40
 
     services:
       redis:
@@ -226,7 +226,7 @@ jobs:
 
   integration:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     strategy:
       matrix:
@@ -260,7 +260,7 @@ jobs:
       - name: Lerna tsc
         run: yarn tsc
       - name: Run Integration tests for ${{ matrix.db }} matrix
-        timeout-minutes: 30
+        timeout-minutes: 15
         run: ./.github/actions/integration/${{ matrix.db }}.sh
 
   docker-image-latest-set-tag:

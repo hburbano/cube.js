@@ -20,14 +20,14 @@ describe('AuroraServerlessMySqlDriver', () => {
   beforeAll(async () => {
     const mysqlRootPassword = process.env.TEST_DB_PASSWORD || 'Test1test';
 
-    mysqlContainer = await new GenericContainer('mysql', mysqlVersion)
+    mysqlContainer = await new GenericContainer(`mysql:${mysqlVersion}`)
       .withEnv('MYSQL_ROOT_PASSWORD', mysqlRootPassword)
       .withExposedPorts(3306)
       .start();
 
     const mappedSqlPort = mysqlContainer && mysqlContainer.getMappedPort(3306) || 3306;
 
-    container = await new GenericContainer('koxudaxi/local-data-api', localDataApiVersion)
+    container = await new GenericContainer(`koxudaxi/local-data-api:${localDataApiVersion}`)
       .withEnv('MYSQL_HOST', 'host.docker.internal')
       .withEnv('MYSQL_PORT', mappedSqlPort)
       .withEnv('MYSQL_USER', 'root')

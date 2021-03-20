@@ -156,7 +156,7 @@ class MySqlDriver extends BaseDriver {
 
   async downloadQueryResults(query, values) {
     if (!this.config.database) {
-      throw new Error(`Default database should be defined to be used for temporary tables during query results downloads`);
+      throw new Error('Default database should be defined to be used for temporary tables during query results downloads');
     }
     const tableName = crypto.randomBytes(10).toString('hex');
     const columns = await this.withConnection(async db => {

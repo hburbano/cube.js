@@ -1,16 +1,16 @@
 /* globals describe, afterAll, beforeAll, test, expect, jest */
-const { GenericContainer } = require("testcontainers");
+const { GenericContainer } = require('testcontainers');
 const MySqlDriver = require('../driver/MySqlDriver');
 
 describe('MySqlDriver', () => {
   let container;
   let mySqlDriver;
 
-  jest.setTimeout(50000);
+  jest.setTimeout(60 * 2 * 1000);
 
   const version = process.env.TEST_MYSQL_VERSION || '5.7';
 
-  const startContainer = () => new GenericContainer('mysql', version)
+  const startContainer = () => new GenericContainer(`mysql:${version}`)
     .withEnv('MYSQL_ROOT_PASSWORD', process.env.TEST_DB_PASSWORD || 'Test1test')
     .withExposedPorts(3306)
     .start();
@@ -40,13 +40,13 @@ describe('MySqlDriver', () => {
   });
 
   test('truncated wrong value', async () => {
-    await mySqlDriver.uploadTable(`test.wrong_value`, [{ name: 'value', type: 'string' }], {
-      rows: [{ value: "Tekirdağ" }]
+    await mySqlDriver.uploadTable('test.wrong_value', [{ name: 'value', type: 'string' }], {
+      rows: [{ value: 'Tekirdağ' }]
     });
     expect(JSON.parse(JSON.stringify(await mySqlDriver.query('select * from test.wrong_value'))))
-      .toStrictEqual([{ value: "Tekirdağ" }]);
+      .toStrictEqual([{ value: 'Tekirdağ' }]);
     expect(JSON.parse(JSON.stringify((await mySqlDriver.downloadQueryResults('select * from test.wrong_value')).rows)))
-      .toStrictEqual([{ value: "Tekirdağ" }]);
+      .toStrictEqual([{ value: 'Tekirdağ' }]);
   });
 
   test('mysql to generic type', async () => {
@@ -63,7 +63,7 @@ describe('MySqlDriver', () => {
   });
 
   test('boolean field', async () => {
-    await mySqlDriver.uploadTable(`test.boolean`, [{ name: 'b_value', type: 'boolean' }], {
+    await mySqlDriver.uploadTable('test.boolean', [{ name: 'b_value', type: 'boolean' }], {
       rows: [
         { b_value: true },
         { b_value: true },
@@ -82,25 +82,40 @@ describe('MySqlDriver', () => {
   test('database pool error', async () => {
     const poolErrorContainer = await startContainer();
     const poolErrorDriver = createDriver(poolErrorContainer);
-    let databasePoolErrorLogged = false;
-    poolErrorDriver.setLogger((msg, event) => {
-      if (msg === 'Database Pool Error') {
-        databasePoolErrorLogged = true;
-      }
-      console.log(`${msg}: ${JSON.stringify(event)}`);
-    });
-    await poolErrorDriver.createSchemaIfNotExists('test');
-    await poolErrorDriver.query('DROP SCHEMA test');
-    await poolErrorDriver.createSchemaIfNotExists('test');
-    await poolErrorDriver.query('SELECT 1');
-    await poolErrorContainer.stop();
+
     try {
+      let databasePoolErrorLogged = false;
+      poolErrorDriver.setLogger((msg, event) => {
+        if (msg === 'Database Pool Error') {
+          databasePoolErrorLogged = true;
+        }
+        console.log(`${msg}: ${JSON.stringify(event)}`);
+      });
+
+      await poolErrorDriver.createSchemaIfNotExists('test');
+      await poolErrorDriver.query('DROP SCHEMA test');
+      await poolErrorDriver.createSchemaIfNotExists('test');
       await poolErrorDriver.query('SELECT 1');
-    } catch (e) {
-      console.log(e);
-      expect(e.toString()).toContain('ResourceRequest timed out');
+
+      await poolErrorContainer.stop();
+
+      try {
+        await poolErrorDriver.query('SELECT 1');
+      } catch (e) {
+        console.log(e);
+        expect(e.toString()).toContain('ResourceRequest timed out');
+      }
+
+      expect(databasePoolErrorLogged).toBe(true);
+      await poolErrorDriver.release();
+    } finally {
+      try { await poolErrorDriver.release(); } catch (e) {
+        //
+      }
+
+      try { await poolErrorContainer.stop(); } catch (e) {
+        //
+      }
     }
-    expect(databasePoolErrorLogged).toBe(true);
-    await poolErrorDriver.release();
   });
 });
