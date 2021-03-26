@@ -91,6 +91,8 @@ export class JDBCDriver extends BaseDriver {
     config = config || {};
 
     const dbTypeDescription = JDBCDriver.dbTypeDescription(config.dbType || process.env.CUBEJS_DB_TYPE);
+
+    /** @protected */
     this.config = {
       dbType: process.env.CUBEJS_DB_TYPE,
       url: process.env.CUBEJS_JDBC_URL || dbTypeDescription && dbTypeDescription.jdbcUrl(),
@@ -106,6 +108,7 @@ export class JDBCDriver extends BaseDriver {
       throw new Error('url is required property');
     }
 
+    /** @protected */
     this.pool = genericPool.createPool({
       create: async () => {
         await initMvn(config.customClassPath);
@@ -148,10 +151,17 @@ export class JDBCDriver extends BaseDriver {
     return properties;
   }
 
+  /**
+   * @public
+   * @return {Promise<*>}
+   */
   testConnection() {
     return this.query('SELECT 1', []);
   }
 
+  /**
+   * @protected
+   */
   prepareConnectionQueries() {
     const dbTypeDescription = JDBCDriver.dbTypeDescription(this.config.dbType);
     return this.config.prepareConnectionQueries ||
@@ -159,7 +169,11 @@ export class JDBCDriver extends BaseDriver {
       [];
   }
 
-  query(query, values) {
+  /**
+   * @public
+   * @return {Promise<any>}
+   */
+  async query(query, values) {
     const queryWithParams = applyParams(query, values);
     const cancelObj = {};
     const promise = this.queryPromised(queryWithParams, cancelObj, this.prepareConnectionQueries());
@@ -168,6 +182,9 @@ export class JDBCDriver extends BaseDriver {
     return promise;
   }
 
+  /**
+   * @protected
+   */
   async queryPromised(query, cancelObj, options) {
     options = options || {};
     try {
@@ -190,6 +207,9 @@ export class JDBCDriver extends BaseDriver {
     }
   }
 
+  /**
+   * @protected
+   */
   async executeStatement(conn, query, cancelObj) {
     const createStatementAsync = promisify(conn.createStatement.bind(conn));
     const statement = await createStatementAsync();
@@ -207,15 +227,28 @@ export class JDBCDriver extends BaseDriver {
     return toObjArrayAsync();
   }
 
+  /**
+   * @public
+   * @return {Promise<void>}
+   */
   async release() {
     await this.pool.drain();
     await this.pool.clear();
   }
 
+  /**
+   * @public
+   * @return {string[]}
+   */
   static getSupportedDrivers() {
     return Object.keys(DbTypes);
   }
 
+  /**
+   * @public
+   * @param {string} dbType
+   * @return {Object}
+   */
   static dbTypeDescription(dbType) {
     return DbTypes[dbType];
   }

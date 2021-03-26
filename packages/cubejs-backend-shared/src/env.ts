@@ -107,8 +107,16 @@ const variables = {
     const value = process.env.CUBEJS_DB_POLL_MAX_INTERVAL || '5s';
     return convertTimeStrToMs(value, 'CUBEJS_DB_POLL_MAX_INTERVAL');
   },
+  // Common db options
+  dbName: () => get('CUBEJS_DB_NAME')
+    .required()
+    .asString(),
   // BigQuery Driver
   bigQueryLocation: () => get('CUBEJS_DB_BQ_LOCATION')
+    .asString(),
+  // Databricks
+  databrickUrl: () => get('CUBEJS_DB_DATABRICKS_URL')
+    .required()
     .asString(),
   // Redis
   redisPoolMin: () => get('CUBEJS_REDIS_POOL_MIN')
