@@ -59,7 +59,7 @@ export class DatabricksDriver extends JDBCDriver {
     return true;
   }
 
-  async tablesSchema() {
+  public async tablesSchema() {
     const tables = await this.query(`show tables in ${this.config.database}`, []);
 
     return {

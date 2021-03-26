@@ -11,25 +11,25 @@ const GRANULARITY_TO_INTERVAL: Record<string, (data: string) => string> = {
 };
 
 class HiveFilter extends BaseFilter {
-  likeIgnoreCase(column: any, not: any, param: any) {
+  public likeIgnoreCase(column: any, not: any, param: any) {
     return `${column}${not ? ' NOT' : ''} LIKE CONCAT('%', ${this.allocateParam(param)}, '%')`;
   }
 }
 
 export class DatabricksQuery extends BaseQuery {
-  newFilter(filter: any) {
+  public newFilter(filter: any) {
     return new HiveFilter(this, filter);
   }
 
-  convertTz(field: string) {
+  public convertTz(field: string) {
     return `from_utc_timestamp(${field}, '${this.timezone}')`;
   }
 
-  timeStampCast(value: string) {
+  public timeStampCast(value: string) {
     return `from_utc_timestamp(replace(replace(${value}, 'T', ' '), 'Z', ''), 'UTC')`;
   }
 
-  dateTimeCast(value: string) {
+  public dateTimeCast(value: string) {
     return `from_utc_timestamp(${value}, 'UTC')`; // TODO
   }
 
@@ -41,15 +41,15 @@ export class DatabricksQuery extends BaseQuery {
   //   return `DATE_ADD(${date}, INTERVAL ${interval})`; // TODO
   // }
 
-  timeGroupedColumn(granularity: string, dimension: string) {
+  public timeGroupedColumn(granularity: string, dimension: string) {
     return GRANULARITY_TO_INTERVAL[granularity](dimension);
   }
 
-  escapeColumnName(name: string) {
+  public escapeColumnName(name: string) {
     return `\`${name}\``;
   }
 
-  getFieldIndex(id: string) {
+  public getFieldIndex(id: string) {
     const dimension = this.dimensionsForSelect().find((d: any) => d.dimension === id);
     if (dimension) {
       return super.getFieldIndex(id);
@@ -57,11 +57,11 @@ export class DatabricksQuery extends BaseQuery {
     return this.escapeColumnName(this.aliasName(id, false));
   }
 
-  unixTimestampSql() {
+  public unixTimestampSql() {
     return 'unix_timestamp()';
   }
 
-  defaultRefreshKeyRenewalThreshold() {
+  public defaultRefreshKeyRenewalThreshold() {
     return 120;
   }
 }
