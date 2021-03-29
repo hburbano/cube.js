@@ -14,7 +14,16 @@
  */
 
 declare module '@cubejs-client/ws-transport' {
-    class WebSocketTransportResult {
+    import type { ITransport, ITransportResponse } from '@cubejs-client/core';
+    /**
+     * @title @cubejs-client/ws-transport
+     * @permalink /@cubejs-client-ws-transport
+     * @menuCategory Cube.js Frontend
+     * @subcategory Reference
+     * @menuOrder 4
+     * @description WebSocket transport for Cube.js client
+     */
+    declare class WebSocketTransportResult {
         protected readonly status: unknown;
         protected readonly result: unknown;
         constructor({ status, message }: {
@@ -23,40 +32,36 @@ declare module '@cubejs-client/ws-transport' {
         });
         json(): Promise<unknown>;
     }
-    type WebSocketTransportOptions = {
-        authorization: string;
+    declare type WebSocketTransportOptions = {
+        authorization?: string;
         apiUrl: string;
-        // @deprecated
-        hearBeatInterval?: number,
-        heartBeatInterval?: number,
+        hearBeatInterval?: number;
+        heartBeatInterval?: number;
     };
-    type Message = {
+    declare type Message = {
         messageId: number;
         requestId: any;
         method: string;
-        params: string;
+        params: Record<string, unknown>;
     };
-    type Subscription = {
+    declare type Subscription = {
         message: Message;
         callback: (result: WebSocketTransportResult) => void;
     };
-    class WebSocketTransport {
+    declare class WebSocketTransport implements ITransport<WebSocketTransportResult> {
         protected readonly apiUrl: string;
-        protected readonly hearBeatInterval: number;
-        protected token: string;
+        protected readonly heartBeatInterval: number;
+        protected token: string | undefined;
         protected ws: any;
         protected messageCounter: number;
         protected messageIdToSubscription: Record<number, Subscription>;
         protected messageQueue: Message[];
-        constructor({ authorization, apiUrl, hearBeatInterval }: WebSocketTransportOptions);
-        set authorization(token: string);
-        get authorization(): string;
-        initSocket(): any;
+        constructor({ authorization, apiUrl, heartBeatInterval, hearBeatInterval }: WebSocketTransportOptions);
+        set authorization(token: string | undefined);
+        get authorization(): string | undefined;
+        protected initSocket(): any;
         protected sendMessage(message: any): void;
-        request(method: string, { baseRequestId, ...params }: any): {
-            subscribe(callback: Function): Promise<any>;
-            unsubscribe(): Promise<void>;
-        };
+        request(method: string, { baseRequestId, ...params }: Record<string, unknown>): ITransportResponse<WebSocketTransportResult>;
     }
     export default WebSocketTransport;
 }

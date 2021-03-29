@@ -25,15 +25,21 @@ declare module '@cubejs-client/core' {
     method?: 'GET' | 'PUT' | 'POST' | 'PATCH'
   };
 
-  export interface ITransport {
-    request(method: string, params: Record<string, unknown>): () => Promise<void>;
+  export interface ITransportResponse<R> {
+    subscribe: <CBResult>(cb: (result: R, resubscribe: (() => Promise<CBResult>)) => CBResult) => Promise<CBResult>;
+    // Optional, supported in WebSocketTransport
+    unsubscribe?: () => Promise<void>;
+  }
+
+  export interface ITransport<R> {
+    request(method: string, params: Record<string, unknown>): ITransportResponse<R>;
   }
 
   /**
    * Default transport implementation.
    * @order 3
    */
-  export class HttpTransport implements ITransport {
+  export class HttpTransport implements ITransport<ResultSet> {
     /**
      * @hidden
      */
